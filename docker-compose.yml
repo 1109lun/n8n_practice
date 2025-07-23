@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - TZ=Asia/Taipei
+      # 啟用簡單的 Basic Auth，避免別人連到你的 n8n
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASS}
+      # 讓外部 Webhook 可用，之後如果搬到 VPS 記得把網址改成公開網域
+      - WEBHOOK_TUNNEL_URL=http://localhost:5678
+    volumes:
+      - ./data:/home/node/.n8n        # 工作流程、憑證都會存這裡
