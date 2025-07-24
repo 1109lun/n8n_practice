@@ -1,0 +1,310 @@
+{
+  "name": "Monitor School Announcements",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1872,
+        -32
+      ],
+      "id": "d8750c70-9912-47d4-afd7-2319c1bdee1e",
+      "name": "Schedule Trigger (Every 2 Hours)"
+    },
+    {
+      "parameters": {
+        "url": "https://www.csie.ncku.edu.tw/zh-hant/news/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1680,
+        -32
+      ],
+      "id": "42b113ec-ed52-45c4-8756-7b3a888a2f6e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "html_content",
+              "cssSelector": "li.li-title",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {
+          "trimValues": true
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        -1216,
+        16
+      ],
+      "id": "736c18be-0c39-4178-a6fc-89e42b78aa7c",
+      "name": "HTML Extract"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allAnnouncements = [];\n\nfor (const item of $input.all()) {\n  const htmlArray = item.json.html_content;\n\n  if (Array.isArray(htmlArray)) {\n    htmlArray.forEach(html => {\n      const parsed = parseHTML(html);\n      if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n        allAnnouncements.push(parsed);\n      }\n    });\n  } else if (typeof htmlArray === 'string') {\n    const parsed = parseHTML(htmlArray);\n    if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n      allAnnouncements.push(parsed);\n    }\n  }\n}\n\nfunction parseHTML(html) {\n  try {\n    // 只抓出「一般」或「重要」類別的分類\n    const categoryMatch = html.match(/<span[^>]*class=\"badge[^\"]*(bg-primary|bg-danger|bg-info|bg-success)[^\"]*\"[^>]*>([^<]+)<\\/span>/);\n    \n    // 提取連結和標題\n    const linkMatch = html.match(/<a[^>]*href=\"([^\"]*)\"[^>]*>([^<]+)<\\/a>/);\n\n    // 提取日期\n    const dateMatch = html.match(/<small[^>]*>(\\d{4}\\.\\d{2}\\.\\d{2})<\\/small>/);\n\n    if (!linkMatch || !dateMatch) return null;\n\n    let cleanLink = linkMatch[1].trim();\n\n    // 補齊相對路徑\n    if (!cleanLink.startsWith('http')) {\n      cleanLink = cleanLink.replace(/^\\/+/, '');\n      if (!cleanLink.startsWith('zh-hant/')) {\n        cleanLink = 'zh-hant/' + cleanLink.replace(/^zh-hant\\//, '');\n      }\n    }\n\n    return {\n      category: categoryMatch ? categoryMatch[2].trim() : null, // \"一般\" 或 \"重要\"\n      title: linkMatch[2].trim(),\n      link: cleanLink,\n      date: dateMatch[1].trim(),\n      id: extractIdFromLink(cleanLink)\n    };\n  } catch (err) {\n    console.log('解析失敗:', err);\n    return null;\n  }\n}\n\nfunction extractIdFromLink(link) {\n  const match = link.match(/\\/(\\d+)$/);\n  return match ? match[1] : null;\n}\n\n// 僅保留「一般」或「重要」\nfunction isTargetCategory(category) {\n  return category === '一般' || category === '重要' || category === '研究所' || category === '碩士';\n}\n\n// 保留 14 天內的公告\nfunction isNewAnnouncement(dateStr) {\n  try {\n    const parts = dateStr.match(/(\\d{4})\\.(\\d{2})\\.(\\d{2})/);\n    if (!parts) return false;\n\n    const date = new Date(parts[1], parts[2] - 1, parts[3]);\n    const today = new Date();\n    today.setHours(0, 0, 0, 0);\n\n    const diffTime = today - date;\n    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));\n    return diffDays >= 0 && diffDays <= 140;\n  } catch (e) {\n    console.log('日期解析失敗:', e);\n    return false;\n  }\n}\n\nif (allAnnouncements.length === 0) {\n  console.log('⚠ 沒有符合條件的公告');\n  return [];\n}\n\nconsole.log(`✅ 找到 ${allAnnouncements.length} 則新公告`);\nreturn [{ json: { announcements: allAnnouncements, count: allAnnouncements.length } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1024,
+        16
+      ],
+      "id": "4adfd1f4-86f8-4bd5-9e24-1f6123d38237",
+      "name": "Parse & Filter New Announcements"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-new-announcements",
+              "leftValue": "={{ $json.announcements && $json.announcements.length > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -784,
+        128
+      ],
+      "id": "fbe3824d-6460-47f8-a429-80113f3e3a43",
+      "name": "Has New Announcements?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "ne6144016@gs.ncku.edu.tw",
+        "toEmail": "ne6144016@gs.ncku.edu.tw",
+        "subject": "=系上有 {{ $json.count }} 則新公告 - {{ new Date().toLocaleDateString('zh-TW') }}",
+        "html": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n<h2 style=\"color: #333; margin-bottom: 20px; text-align: center;\">🎓 成大資工系最新公告</h2>\n<p style=\"color: #666; text-align: center; margin-bottom: 30px;\">共 {{ $json.count }} 則新公告 | {{ new Date().toLocaleDateString('zh-TW') }}</p>\n\n<div>\n{{ $json.announcements.map(item => {\n  let bgColor, borderColor, textColor;\n  switch(item.category) {\n    case '重要':\n      bgColor = '#fff5f5'; borderColor = '#dc3545'; textColor = '#dc3545';\n      break;\n    case '研究所':\n      bgColor = '#f0fdff'; borderColor = '#17a2b8'; textColor = '#17a2b8';\n      break;\n    case '碩士':\n      bgColor = '#f8fff8'; borderColor = '#28a745'; textColor = '#28a745';\n      break;\n    case '大學部':\n      bgColor = '#fffdf0'; borderColor = '#ffc107'; textColor = '#b8860b';\n      break;\n    default:\n      bgColor = '#f8f9ff'; borderColor = '#007bff'; textColor = '#007bff';\n  }\n  \n  return `<div style=\"margin: 15px 0; padding: 15px; border-left: 4px solid ${borderColor}; background-color: ${bgColor}; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);\">\n    <div style=\"margin-bottom: 8px;\">\n      <span style=\"background-color: ${borderColor}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-right: 10px;\">${item.category}</span>\n      <small style=\"color: #888; font-size: 12px;\">${item.date}</small>\n    </div>\n    <a href=\"https://www.csie.ncku.edu.tw/${item.link}\" target=\"_blank\" style=\"text-decoration: none; color: ${textColor}; font-weight: bold; font-size: 16px; line-height: 1.4; display: block;\">${item.title}</a>\n  </div>`;\n}).join('') }}\n</div>\n\n<hr style=\"margin: 30px 0; border: none; border-top: 1px solid #eee;\">\n<div style=\"text-align: center; padding: 20px;\">\n  <p style=\"color: #888; font-size: 12px; margin: 0;\">📧 此郵件由 n8n 自動發送</p>\n  <p style=\"color: #888; font-size: 12px; margin: 5px 0 0 0;\">成功大學資訊工程學系</p>\n  <p style=\"color: #999; font-size: 11px; margin: 10px 0 0 0;\">每 2 小時自動檢查，僅發送 2 天內的新公告</p>\n</div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        -48
+      ],
+      "id": "254ff328-5016-443a-bb43-979a595e5bf2",
+      "name": "Send New Announcements Email",
+      "webhookId": "b0ac78f5-66df-43b1-b644-5af074ec0fb6",
+      "credentials": {
+        "smtp": {
+          "id": "XKi31eh7Ju8M3hAm",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        112
+      ],
+      "id": "64d3a11e-be69-4cd5-a408-bec9b7927821",
+      "name": "No New Announcements"
+    },
+    {
+      "parameters": {
+        "url": "https://www.csie.ncku.edu.tw/zh-hant/news/?page=2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1680,
+        144
+      ],
+      "id": "791b3d74-986c-4c08-8322-6b63cf7d841a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1424,
+        16
+      ],
+      "id": "56863b6d-3e3d-4505-bfc8-ccc510f4a3c2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "https://www.csie.ncku.edu.tw/zh-hant/news/?page=3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1680,
+        320
+      ],
+      "id": "d9979924-12ab-4485-8ba7-a97cc3f28008",
+      "name": "HTTP Request2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger (Every 2 Hours)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Extract": {
+      "main": [
+        [
+          {
+            "node": "Parse & Filter New Announcements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Filter New Announcements": {
+      "main": [
+        [
+          {
+            "node": "Has New Announcements?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send New Announcements Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New Announcements?": {
+      "main": [
+        [
+          {
+            "node": "Send New Announcements Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No New Announcements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "HTML Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7e76310c-c08a-48c8-975c-4d6e700b2abb",
+  "meta": {
+    "instanceId": "9cbb7f9b123440507029d29f959ac84998bf2fcfa6a21d9f6308c51f1932c164"
+  },
+  "id": "8lCwHXFI04zSPN5W",
+  "tags": []
+}
