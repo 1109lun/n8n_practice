@@ -3,37 +3,17 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "hours"
-            },
-            {}
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        -1872,
-        -32
-      ],
-      "id": "d8750c70-9912-47d4-afd7-2319c1bdee1e",
-      "name": "Schedule Trigger (Every 2 Hours)"
-    },
-    {
-      "parameters": {
         "url": "https://www.csie.ncku.edu.tw/zh-hant/news/",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1680,
-        -32
+        -2688,
+        544
       ],
-      "id": "42b113ec-ed52-45c4-8756-7b3a888a2f6e",
-      "name": "HTTP Request"
+      "id": "f00ffe01-850f-4f26-8b69-2b563cb30ae2",
+      "name": "HTTP Request3"
     },
     {
       "parameters": {
@@ -55,57 +35,24 @@
       "type": "n8n-nodes-base.html",
       "typeVersion": 1.2,
       "position": [
-        -1216,
-        16
+        -2224,
+        592
       ],
-      "id": "736c18be-0c39-4178-a6fc-89e42b78aa7c",
-      "name": "HTML Extract"
+      "id": "a11df6d2-c9c8-43bf-a601-a018b5582715",
+      "name": "HTML Extract1"
     },
     {
       "parameters": {
-        "jsCode": "const allAnnouncements = [];\n\nfor (const item of $input.all()) {\n  const htmlArray = item.json.html_content;\n\n  if (Array.isArray(htmlArray)) {\n    htmlArray.forEach(html => {\n      const parsed = parseHTML(html);\n      if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n        allAnnouncements.push(parsed);\n      }\n    });\n  } else if (typeof htmlArray === 'string') {\n    const parsed = parseHTML(htmlArray);\n    if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n      allAnnouncements.push(parsed);\n    }\n  }\n}\n\nfunction parseHTML(html) {\n  try {\n    // 只抓出「一般」或「重要」類別的分類\n    const categoryMatch = html.match(/<span[^>]*class=\"badge[^\"]*(bg-primary|bg-danger|bg-info|bg-success)[^\"]*\"[^>]*>([^<]+)<\\/span>/);\n    \n    // 提取連結和標題\n    const linkMatch = html.match(/<a[^>]*href=\"([^\"]*)\"[^>]*>([^<]+)<\\/a>/);\n\n    // 提取日期\n    const dateMatch = html.match(/<small[^>]*>(\\d{4}\\.\\d{2}\\.\\d{2})<\\/small>/);\n\n    if (!linkMatch || !dateMatch) return null;\n\n    let cleanLink = linkMatch[1].trim();\n\n    // 補齊相對路徑\n    if (!cleanLink.startsWith('http')) {\n      cleanLink = cleanLink.replace(/^\\/+/, '');\n      if (!cleanLink.startsWith('zh-hant/')) {\n        cleanLink = 'zh-hant/' + cleanLink.replace(/^zh-hant\\//, '');\n      }\n    }\n\n    return {\n      category: categoryMatch ? categoryMatch[2].trim() : null, // \"一般\" 或 \"重要\"\n      title: linkMatch[2].trim(),\n      link: cleanLink,\n      date: dateMatch[1].trim(),\n      id: extractIdFromLink(cleanLink)\n    };\n  } catch (err) {\n    console.log('解析失敗:', err);\n    return null;\n  }\n}\n\nfunction extractIdFromLink(link) {\n  const match = link.match(/\\/(\\d+)$/);\n  return match ? match[1] : null;\n}\n\n// 僅保留「一般」或「重要」\nfunction isTargetCategory(category) {\n  return category === '一般' || category === '重要' || category === '研究所' || category === '碩士';\n}\n\n// 保留 14 天內的公告\nfunction isNewAnnouncement(dateStr) {\n  try {\n    const parts = dateStr.match(/(\\d{4})\\.(\\d{2})\\.(\\d{2})/);\n    if (!parts) return false;\n\n    const date = new Date(parts[1], parts[2] - 1, parts[3]);\n    const today = new Date();\n    today.setHours(0, 0, 0, 0);\n\n    const diffTime = today - date;\n    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));\n    return diffDays >= 0 && diffDays <= 140;\n  } catch (e) {\n    console.log('日期解析失敗:', e);\n    return false;\n  }\n}\n\nif (allAnnouncements.length === 0) {\n  console.log('⚠ 沒有符合條件的公告');\n  return [];\n}\n\nconsole.log(`✅ 找到 ${allAnnouncements.length} 則新公告`);\nreturn [{ json: { announcements: allAnnouncements, count: allAnnouncements.length } }];\n"
+        "jsCode": "const allAnnouncements = [];\n\nfor (const item of $input.all()) {\n  const htmlArray = item.json.html_content;\n\n  if (Array.isArray(htmlArray)) {\n    htmlArray.forEach(html => {\n      const parsed = parseHTML(html);\n      if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n        allAnnouncements.push(parsed);\n      }\n    });\n  } else if (typeof htmlArray === 'string') {\n    const parsed = parseHTML(htmlArray);\n    if (parsed && isTargetCategory(parsed.category) && isNewAnnouncement(parsed.date)) {\n      allAnnouncements.push(parsed);\n    }\n  }\n}\n\nfunction parseHTML(html) {\n  try {\n    // 只抓出「一般」或「重要」類別的分類\n    const categoryMatch = html.match(/<span[^>]*class=\"badge[^\"]*(bg-primary|bg-danger|bg-info|bg-success)[^\"]*\"[^>]*>([^<]+)<\\/span>/);\n    \n    // 提取連結和標題\n    const linkMatch = html.match(/<a[^>]*href=\"([^\"]*)\"[^>]*>([^<]+)<\\/a>/);\n\n    // 提取日期\n    const dateMatch = html.match(/<small[^>]*>(\\d{4}\\.\\d{2}\\.\\d{2})<\\/small>/);\n\n    if (!linkMatch || !dateMatch) return null;\n\n    let cleanLink = linkMatch[1].trim();\n\n    // 補齊相對路徑\n    if (!cleanLink.startsWith('http')) {\n      cleanLink = cleanLink.replace(/^\\/+/, '');\n      if (!cleanLink.startsWith('zh-hant/')) {\n        cleanLink = 'zh-hant/' + cleanLink.replace(/^zh-hant\\//, '');\n      }\n    }\n\n    return {\n      category: categoryMatch ? categoryMatch[2].trim() : null, // \"一般\" 或 \"重要\"\n      title: linkMatch[2].trim(),\n      link: cleanLink,\n      date: dateMatch[1].trim(),\n      id: extractIdFromLink(cleanLink)\n    };\n  } catch (err) {\n    console.log('解析失敗:', err);\n    return null;\n  }\n}\n\nfunction extractIdFromLink(link) {\n  const match = link.match(/\\/(\\d+)$/);\n  return match ? match[1] : null;\n}\n\n// 僅保留「一般」或「重要」\nfunction isTargetCategory(category) {\n  return category === '一般' || category === '重要' || category === '研究所' || category === '碩士';\n}\n\nfunction isNewAnnouncement(dateStr) {\n  try {\n    const parts = dateStr.match(/(\\\\d{4})\\\\.(\\\\d{2})\\\\.(\\\\d{2})/);\n    if (!parts) return false;\n\n    const announcementDate = new Date(parts[1], parts[2] - 1, parts[3]);\n    const today = new Date();\n    \n    // 重置時間為 00:00:00 以便精確比較日期\n    announcementDate.setHours(0, 0, 0, 0);\n    today.setHours(0, 0, 0, 0);\n\n    // 只返回今天的公告（當日 00:00-23:59）\n    return announcementDate.getTime() === today.getTime();\n  } catch (e) {\n    console.log('日期解析失敗:', e);\n    return false;\n  }\n}\n\nif (allAnnouncements.length === 0) {\n  console.log('⚠ 沒有符合條件的公告');\n  return [];\n}\n\nconsole.log(`✅ 找到 ${allAnnouncements.length} 則新公告`);\nreturn [{ json: { announcements: allAnnouncements, count: allAnnouncements.length } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1024,
-        16
+        -2032,
+        592
       ],
-      "id": "4adfd1f4-86f8-4bd5-9e24-1f6123d38237",
-      "name": "Parse & Filter New Announcements"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 1
-          },
-          "conditions": [
-            {
-              "id": "has-new-announcements",
-              "leftValue": "={{ $json.announcements && $json.announcements.length > 0 }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equal"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        -784,
-        128
-      ],
-      "id": "fbe3824d-6460-47f8-a429-80113f3e3a43",
-      "name": "Has New Announcements?"
+      "id": "685e3ae5-e81e-4536-8cb4-c21cba7308fb",
+      "name": "Parse & Filter New Announcements1"
     },
     {
       "parameters": {
@@ -118,11 +65,11 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        -528,
-        -48
+        -1536,
+        528
       ],
-      "id": "254ff328-5016-443a-bb43-979a595e5bf2",
-      "name": "Send New Announcements Email",
+      "id": "639268bf-4342-4eb3-98bc-94a286e8e062",
+      "name": "Send New Announcements Email1",
       "webhookId": "b0ac78f5-66df-43b1-b644-5af074ec0fb6",
       "credentials": {
         "smtp": {
@@ -132,17 +79,6 @@
       }
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        -528,
-        112
-      ],
-      "id": "64d3a11e-be69-4cd5-a408-bec9b7927821",
-      "name": "No New Announcements"
-    },
-    {
       "parameters": {
         "url": "https://www.csie.ncku.edu.tw/zh-hant/news/?page=2",
         "options": {}
@@ -150,11 +86,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1680,
-        144
+        -2688,
+        720
       ],
-      "id": "791b3d74-986c-4c08-8322-6b63cf7d841a",
-      "name": "HTTP Request1"
+      "id": "f162e662-1ec3-4c4f-a2b8-7907814698f3",
+      "name": "HTTP Request4"
     },
     {
       "parameters": {
@@ -163,11 +99,11 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -1424,
-        16
+        -2432,
+        592
       ],
-      "id": "56863b6d-3e3d-4505-bfc8-ccc510f4a3c2",
-      "name": "Merge"
+      "id": "c358e52d-197f-4110-abed-d77c098857f1",
+      "name": "Merge1"
     },
     {
       "parameters": {
@@ -177,121 +113,117 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1680,
-        320
+        -2688,
+        896
       ],
-      "id": "d9979924-12ab-4485-8ba7-a97cc3f28008",
-      "name": "HTTP Request2"
+      "id": "557de8df-92d1-479e-8716-db1f71ce9d87",
+      "name": "HTTP Request5"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2880,
+        544
+      ],
+      "id": "574b0947-8098-4230-a9b7-9d7ad7301652",
+      "name": "Schedule Trigger"
     }
   ],
   "pinData": {},
   "connections": {
-    "Schedule Trigger (Every 2 Hours)": {
+    "HTTP Request3": {
       "main": [
         [
           {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "HTTP Request1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "HTTP Request2",
+            "node": "Merge1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request": {
+    "HTML Extract1": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Parse & Filter New Announcements1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTML Extract": {
+    "Parse & Filter New Announcements1": {
       "main": [
         [
           {
-            "node": "Parse & Filter New Announcements",
+            "node": "Send New Announcements Email1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse & Filter New Announcements": {
+    "HTTP Request4": {
       "main": [
         [
           {
-            "node": "Has New Announcements?",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Send New Announcements Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has New Announcements?": {
-      "main": [
-        [
-          {
-            "node": "Send New Announcements Email",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "No New Announcements",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request1": {
-      "main": [
-        [
-          {
-            "node": "Merge",
+            "node": "Merge1",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Merge": {
+    "Merge1": {
       "main": [
         [
           {
-            "node": "HTML Extract",
+            "node": "HTML Extract1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request2": {
+    "HTTP Request5": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge1",
             "type": "main",
             "index": 2
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request5",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -301,8 +233,9 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "7e76310c-c08a-48c8-975c-4d6e700b2abb",
+  "versionId": "dc76c67d-9256-4612-8f42-74d579b44adb",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "9cbb7f9b123440507029d29f959ac84998bf2fcfa6a21d9f6308c51f1932c164"
   },
   "id": "8lCwHXFI04zSPN5W",
